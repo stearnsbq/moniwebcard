@@ -5,7 +5,7 @@ import wasm from 'vite-plugin-wasm'
 
 // https://astro.build/config
 export default defineConfig({
-   site: 'https://stearnsbq.github.io',
+   site: 'https://stearnsbq.github.io/moniwebcard',
       vite: {
     plugins: [tailwindcss(), wasm()],
     optimizeDeps: { exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'] }

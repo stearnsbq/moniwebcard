@@ -1,0 +1,60 @@
+---
+import BluetoothConnector from './bluetooth-connector.astro';
+
+// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
+// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+---
+
+<div class="flex flex-col border-2 rounded-md gap-4 p-4 w-3xl bg-sky-300 max-w-5xl">
+    <div class="card-header-content">
+          <h1 class="p-0 m-0">Moni Web Card</h1>
+  <p>
+    This is a simple webapp designed to allow you to upload images / videos and
+    manage settings on your monicard without using wechat!
+  </p>
+
+
+  <details
+    class="group border border-slate-200 rounded-lg p-4 bg-white "
+  >
+    <summary
+      class="flex justify-between items-center font-medium cursor-pointer list-none list-image-none [&::-webkit-details-marker]:hidden"
+    >
+      <span>Instructions</span>
+      <span class="transition group-open:rotate-180">
+        <svg
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"><path d="M6 9l6 6 6-6"></path></svg
+        >
+      </span>
+    </summary>
+    <div class="text-slate-600 mt-3 group-open:animate-fadeIn">
+      <p>
+        Note: this webapp only works on chromium based browsers due to the
+        native bluetooth api support. Firefox may be possible with an extension
+      </p>
+
+      <ol>
+        <li>Visit the settings page chrome://flags in your browser.</li>
+        <li>
+          Search for Experimental Web Platform features or Web Bluetooth API.
+        </li>
+        <li>Enable it and restart your browser.</li>
+        <li>
+          Click the connect button below, give permissions and try and connect
+          your device.
+        </li>
+      </ol>
+    </div>
+  </details>
+    </div>
+
+  <BluetoothConnector/>
+
+</div>

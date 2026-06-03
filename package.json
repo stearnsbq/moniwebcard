@@ -12,6 +12,13 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^6.4.2"
+    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "@tailwindcss/vite": "^4.3.0",
+    "astro": "^6.4.2",
+    "mediabunny": "^1.46.0",
+    "tailwindcss": "^4.3.0",
+    "vite-plugin-wasm": "^3.6.0"
   }
 }

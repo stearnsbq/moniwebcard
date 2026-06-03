@@ -11,7 +11,7 @@ App Available here: https://monicard.quinn50.dev/
 
 ## What is monicard? 
 
-Monicard is at the time of writing a chinese only electronic color eink "identity" card device that allows you to upload short video clips, images and edit a business cards with your interest. It includes a street pass like functionality that will automatically exchange business cards and interests with other monicards over BLE. 
+Monicard is at the time of writing a chinese only electronic color eink "identity" card device that allows you to upload short video clips, images and edit business cards with your interests. It includes a street pass like functionality that will automatically exchange business cards and interests with other monicards over BLE. 
 
 Example: https://xcancel.com/Gao_AR/status/2056693868180255101
 

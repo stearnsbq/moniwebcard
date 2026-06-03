@@ -28,14 +28,14 @@
         controls
         src=""
         id="preview-video"
-        class="hidden max-w-[240px] max-h-[320px] rounded border"
-      ></video>
+        class="hidden max-w-[240px] max-h-[320px] rounded border"></video>
     </div>
 
     <div class="flex items-center justify-center w-full">
       <label
         for="file"
-        class="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-blue-300 border-black-300 hover:bg-blue-200 transition duration-300"
+        id="drop-zone"
+        class="flex flex-col items-center justify-center w-full h-32 p-4 border-2 border-dashed rounded-lg cursor-pointer bg-blue-300 border-black-300 hover:bg-blue-200 transition duration-300"
       >
         <div class="flex flex-col items-center justify-center pt-5 pb-6">
           <svg
@@ -99,9 +99,9 @@
           id="summary-progress-bar"
           class="bg-blue-600 h-3 transition-all duration-200"
           style="width: 0%"
-        ></div>
+        >
+        </div>
       </div>
-
     </div>
   </div>
 </div>
@@ -170,8 +170,6 @@
     }
   }
 
-
-
   function resetSummary() {
     setSummaryStatus("Idle");
     setSummaryText("summary-file", "-");
@@ -196,10 +194,8 @@
 
     setSummaryStatus("Loading FFmpeg");
 
-
     mpegRef.on("log", ({ message }) => {
       console.log(message);
-
     });
 
     await mpegRef.load();
@@ -275,12 +271,7 @@
   }
 
   function u32le(n) {
-    return [
-      n & 0xff,
-      (n >> 8) & 0xff,
-      (n >> 16) & 0xff,
-      (n >> 24) & 0xff,
-    ];
+    return [n & 0xff, (n >> 8) & 0xff, (n >> 16) & 0xff, (n >> 24) & 0xff];
   }
 
   function readU16le(bytes, offset = 0) {
@@ -391,12 +382,7 @@
   }
 
   function encodeStart(totalLength) {
-    const payload = new Uint8Array([
-      0x01,
-      0x00,
-      0x02,
-      ...u32le(totalLength),
-    ]);
+    const payload = new Uint8Array([0x01, 0x00, 0x02, ...u32le(totalLength)]);
 
     return encodeFileMessage(FileCommand.START_REQUEST, payload);
   }
@@ -544,7 +530,6 @@
     console.log("[notify]", parsed.cmd, bytesToHex(parsed.body));
 
     if (parsed.cmd === FileCommand.LOSE_CHECK_REQUEST) {
-
       await sendFrame(encodeLoseCheckResponse(), "LOSE_CHECK_RESPONSE");
     }
 
@@ -661,7 +646,6 @@
       throw new Error("Device does not expose GATT");
     }
 
-
     server = await device.gatt.connect();
 
     const service = await server.getPrimaryService(SERVICE_UUID);
@@ -675,13 +659,11 @@
     document.getElementById("upload-container")?.classList.remove("hidden");
 
     setSummaryStatus("Connected");
-
   }
 
   async function upload(file) {
     resetSummary();
     setSummaryStatus("Preparing");
-
 
     const raw = new Uint8Array(await file.arrayBuffer());
     const { transfer, alignedLen, crc } = prepareTransferBytes(raw);
@@ -695,10 +677,8 @@
 
     const crcText = `0x${crc.toString(16).padStart(8, "0")}`;
 
-
     setSummaryText("summary-file", file.name);
     setSummaryProgress(0, chunks.length);
-
 
     setSummaryStatus("Starting transfer");
 
@@ -730,7 +710,6 @@
     setSummaryStatus("Uploading chunks");
 
     for (let i = 0; i < chunks.length; i++) {
-
       await sendAndWaitDataAck(encodeFileData(i, chunks[i]), i);
 
       setSummaryProgress(i + 1, chunks.length);
@@ -768,7 +747,6 @@
 
     setSummaryStatus("Transcoding video");
 
-
     try {
       await ffmpeg.deleteFile("input.mp4");
     } catch {}
@@ -780,42 +758,38 @@
     await ffmpeg.writeFile("input.mp4", await fetchFile(video));
 
     await ffmpeg.exec([
-        "-i",
-        "input.mp4",
+      "-i",
+      "input.mp4",
 
-        "-t",
-        "4",
+      "-t",
+      "4",
 
-        "-an",
-        "-sn",
-        "-dn",
+      "-an",
+      "-sn",
+      "-dn",
 
-        "-vf",
-        "fps=10,scale=240:320,format=yuvj420p",
+      "-vf",
+      "fps=10,scale=240:320,format=yuvj420p",
 
-        "-c:v",
-        "mjpeg",
+      "-c:v",
+      "mjpeg",
 
-        "-q:v",
-        "26",
+      "-q:v",
+      "26",
 
-
-    //   "-f",
-    //   "avi",
+      //   "-f",
+      //   "avi",
 
       video.name,
     ]);
 
     const data = await ffmpeg.readFile(video.name);
 
-    const bytes =
-      data instanceof Uint8Array ? data : new Uint8Array(data);
+    const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
 
     const outFile = new File([bytes], video.name, {
       type: "video/x-msvideo",
     });
-
-
 
     try {
       await ffmpeg.deleteFile("input.mp4");
@@ -905,7 +879,6 @@
         previewVideo.src = URL.createObjectURL(file);
 
         setSummaryStatus("Video selected");
-    
       } else {
         previewVideo?.classList.add("hidden");
         previewImage?.classList.remove("hidden");
@@ -933,7 +906,10 @@
     }
 
     try {
-      if (file.type.includes("video") || file.name.toLowerCase().endsWith(".mp4")) {
+      if (
+        file.type.includes("video") ||
+        file.name.toLowerCase().endsWith(".mp4")
+      ) {
         const mjpegFile = await transcodeToMJPEG(file);
         await upload(mjpegFile);
       } else {
@@ -954,4 +930,51 @@
       console.error("Upload failed:", err);
     }
   };
+
+  const dropZone = document.getElementById("drop-zone")!;
+
+  window.addEventListener("drop", (e) => {
+    if ([...e.dataTransfer.items].some((item) => item.kind === "file")) {
+      e.preventDefault();
+    }
+  });
+
+  dropZone.addEventListener("drop", (e) => {
+    console.log(e);
+
+    if (e.dataTransfer?.files.length > 0) {
+      e.preventDefault();
+
+
+      fileInput.files = e.dataTransfer?.files;
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  });
+
+  dropZone.addEventListener("dragover", (e) => {
+
+    const fileItems = [...e.dataTransfer.items].filter(
+      (item) => item.kind === "file",
+    );
+    if (fileItems.length > 0) {
+      e.preventDefault();
+      if (fileItems.some((item) => item.type.startsWith("image/"))) {
+        e.dataTransfer.dropEffect = "copy";
+      } else {
+        e.dataTransfer.dropEffect = "none";
+      }
+    }
+  });
+
+  window.addEventListener("dragover", (e) => {
+    const fileItems = [...e.dataTransfer.items].filter(
+      (item) => item.kind === "file",
+    );
+    if (fileItems.length > 0) {
+      e.preventDefault();
+      if (!dropZone.contains(e.target)) {
+        e.dataTransfer.dropEffect = "none";
+      }
+    }
+  });
 </script>

@@ -1,0 +1,172 @@
+<div class="flex flex-col gap-4" id="cards-container">
+  <div class="rounded border border-gray-300 bg-gray-100 p-3 text-sm">
+    <h3 class="font-bold mb-2 m-0">My Business Card</h3>
+
+    <textarea
+      id="card-info-input"
+      class="w-full min-h-32 p-2 rounded border border-gray-300"
+      placeholder="Enter business card text..."
+      maxlength="319"></textarea>
+
+    <div class="flex gap-2 mt-3">
+      <button
+        id="read-card-info"
+        class="bg-blue-500 border-none hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+      >
+        Read Card Info
+      </button>
+
+      <button
+        id="write-card-info"
+        class="bg-green-500 border-none hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+      >
+        Save Card Info
+      </button>
+    </div>
+
+    <p class="text-xs mt-2">
+      <span id="card-info-status">Idle</span>
+    </p>
+  </div>
+
+  <div class="rounded border border-gray-300 bg-gray-100 p-3 text-sm">
+    <h3 class="font-bold mb-2 m-0">Received Cards</h3>
+
+    <button
+      id="sync-cards"
+      class="bg-purple-500 border-none hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
+    >
+      Sync Received Cards
+    </button>
+
+    <p class="text-xs mt-2">
+      <span id="received-cards-status">Idle</span>
+    </p>
+
+    <div id="received-cards-list" class="flex flex-col gap-2 mt-3"></div>
+  </div>
+</div>
+
+<script>
+  import { bluetoothService } from "../services/bluetooth";
+
+  function setCardStatus(text: string | null) {
+    const el = document.getElementById("card-info-status");
+
+    if (el) {
+      el.textContent = text;
+    }
+  }
+
+  function setReceivedCardsStatus(text: string | null) {
+    const el = document.getElementById("received-cards-status");
+
+    if (el) {
+      el.textContent = text;
+    }
+  }
+
+  function renderReceivedCards(cards: string | any[]) {
+    const list = document.getElementById("received-cards-list");
+
+    if (!list) {
+      return;
+    }
+
+    list.innerHTML = "";
+
+    if (cards.length === 0) {
+      list.innerHTML = `<p class="text-xs">No received cards found.</p>`;
+      return;
+    }
+
+    for (const card of cards) {
+      const item = document.createElement("div");
+      item.className = "rounded border border-gray-300 bg-white p-3";
+
+      const text = card.text || card.rawHex || "(empty)";
+
+      item.innerHTML = `
+        <div class="flex justify-between gap-2">
+          <div>
+            <div class="font-bold">Card ${card.id}</div>
+            <pre class="whitespace-pre-wrap text-xs mt-1"></pre>
+          </div>
+
+          <button
+            class="delete-card bg-red-500 border-none hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
+            data-card-id="${card.id}"
+          >
+            Delete
+          </button>
+        </div>
+      `;
+
+      item!.querySelector("pre")!.textContent = text;
+      list.appendChild(item);
+    }
+
+    for (const button of list.querySelectorAll(".delete-card")) {
+      button.addEventListener("click", async () => {
+        const id = Number(button.getAttribute("data-card-id"));
+
+        try {
+          setReceivedCardsStatus(`Deleting card ${id}...`);
+          await bluetoothService.deleteCardById(id);
+
+          const cards = await bluetoothService.syncReceivedCards();
+          renderReceivedCards(cards);
+        } catch (err) {
+          setReceivedCardsStatus("Delete failed");
+          console.error(err);
+        }
+      });
+    }
+  }
+
+  bluetoothService.on("cardStatus", (status) => {
+    setCardStatus(status);
+  });
+
+  bluetoothService.on("cardsStatus", (status) => {
+    setReceivedCardsStatus(status);
+  });
+
+  const readCardInfoButton = document.getElementById("read-card-info");
+  const writeCardInfoButton = document.getElementById("write-card-info");
+  const syncCardsButton = document.getElementById("sync-cards");
+  const cardInfoInput = document.getElementById("card-info-input") as HTMLInputElement;
+
+  readCardInfoButton?.addEventListener("click", async () => {
+    try {
+      const text = await bluetoothService.readDeviceCardInfo();
+
+      if (cardInfoInput) {
+        cardInfoInput.value = text;
+      }
+    } catch (err) {
+      setCardStatus("Read failed");
+      console.error(err);
+    }
+  });
+
+  writeCardInfoButton?.addEventListener("click", async () => {
+    try {
+      const text = cardInfoInput?.value || "";
+      await bluetoothService.writeDeviceCardInfo(text);
+    } catch (err) {
+      setCardStatus("Save failed");
+      console.error(err);
+    }
+  });
+
+  syncCardsButton?.addEventListener("click", async () => {
+    try {
+      const cards = await bluetoothService.syncReceivedCards();
+      renderReceivedCards(cards);
+    } catch (err) {
+      setReceivedCardsStatus("Sync failed");
+      console.error(err);
+    }
+  });
+</script>

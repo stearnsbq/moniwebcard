@@ -1,0 +1,120 @@
+---
+const panelHtml = await Astro.slots.render("default");
+import { rehype } from "rehype";
+
+const tabProcesser = rehype().use(function tabs() {
+  return (tree: any, file: any) => {
+    file.data.tabItems = [];
+    let isFirst = true;
+    let index = 0;
+
+    const visit = (node: any) => {
+      if (!node) {
+        return;
+      }
+
+      for (const child of node.children) {
+        if (child.type !== "element" || child.tagName !== "monicard-tab-item") {
+          if (child.children?.length > 0) {
+            visit(child);
+          }
+
+          continue;
+        }
+
+        const tabLabel = child.properties["dataLabel"];
+
+        (file.data.tabItems as any[]).push({ label: tabLabel, id: `${tabLabel}-${index}`.toLowerCase() });
+        index++; 
+
+        child.tagName = "div";
+        child.properties.role = "tabpanel";
+
+        if (isFirst) {
+          isFirst = false;
+        } else {
+          child.properties.hidden = true;
+        }
+      }
+    };
+
+    visit(tree);
+  };
+});
+
+const result = tabProcesser.processSync(panelHtml);
+
+const tabItems = result.data["tabItems"] as { label: string, id: string }[];
+
+---
+
+<div class="tabs-container flex flex-col">
+  <ul class="flex p-4 flex-row pl-0 m-0 list-none" role="tablist">
+    {
+      tabItems.map(({ label, id }, idx) => (
+        <li role="presentation" class="leading-3">
+          <a
+            
+            class="p-4 text-black no-underline cursor-pointer decoration-solid color-black"
+            
+            class:list={[{'bg-white rounded-tl-sm': idx === 0, 'bg-blue-500 text-white': idx !== 0, 'rounded-tr-sm': idx === tabItems.length - 1}]}
+            id={id}
+            href={"#" + id}
+            role="tab"
+            tabindex=
+            aria-selected={idx == 0}
+          >
+            {label}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+
+  <div class="panel border-t-4 z-20 border-blue-500 rounded-b-sm bg-white p-4">
+    <Fragment set:html={result} />
+  </div>
+</div>
+
+
+<script>
+
+    const tabs = document.querySelectorAll("[role=\"tab\"]")
+    const tabPanels = document.querySelectorAll("[role=\"tabpanel\"")
+
+    function unselectTabs(curIdx: number) {
+        tabs.forEach((tab, idx) => {
+            if(curIdx !== idx){
+
+                    const targetPanel = tabPanels[idx];
+
+                    targetPanel.setAttribute("hidden", "")
+                    tab.setAttribute("aria-selected", "false")
+                    tab.classList.remove("bg-white")
+                    tab.classList.add("bg-blue-500")
+                    tab.classList.add("text-white")
+            }
+        })
+    }
+
+
+    tabs.forEach((tab, idx) => {
+
+        tab.addEventListener("click", (event) => {
+            unselectTabs(idx)
+           // tab.attributes['aria-selected'] = true;
+
+            const targetPanel = tabPanels[idx];
+            
+            targetPanel.removeAttribute("hidden")
+            tab.setAttribute("aria-selected", "true")
+            tab.classList.add("bg-white")
+            tab.classList.add("text-black")
+            tab.classList.remove("text-white")
+
+        })
+
+
+    })
+
+</script>

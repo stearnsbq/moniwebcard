@@ -1,0 +1,216 @@
+<div class="flex flex-col gap-4" id="settings-container">
+  <div class="rounded border border-gray-300 bg-gray-100 p-3 text-sm">
+    <h3 class="font-bold mb-2 m-0">Device Settings</h3>
+
+    <div class="flex flex-col gap-2 mt-3">
+      <label class="flex items-center gap-2">
+        <input id="setting-buzzer" type="checkbox" />
+        <span>Buzzer enabled</span>
+      </label>
+
+      <label class="flex items-center gap-2">
+        <input id="setting-vibration" type="checkbox" />
+        <span>Vibration enabled</span>
+      </label>
+
+      <label class="flex items-center gap-2">
+        <input id="setting-light" type="checkbox" />
+        <span>Interest sensing light enabled</span>
+      </label>
+
+      <label class="flex items-center gap-2">
+        <input id="setting-interest-sensing" type="checkbox" />
+        <span>Interest sensing enabled</span>
+      </label>
+
+      <label class="flex items-center gap-2">
+        <input id="setting-ambience-light" type="checkbox" />
+        <span>Rear ambience light enabled</span>
+      </label>
+
+      <label class="flex items-center gap-2">
+        <input id="setting-broadcast" type="checkbox" />
+        <span>Broadcast enabled</span>
+      </label>
+    </div>
+
+    <div class="flex gap-2 mt-3">
+      <button
+        id="read-settings"
+        class="bg-blue-500 border-none hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+      >
+        Read Settings
+      </button>
+
+      <button
+        id="write-settings"
+        class="bg-green-500 border-none hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+      >
+        Save Settings
+      </button>
+    </div>
+
+    <p class="text-xs mt-2">
+      <span id="settings-status">Idle</span>
+    </p>
+  </div>
+
+  <div class="rounded border border-gray-300 bg-gray-100 p-3 text-sm">
+    <h3 class="font-bold mb-2 m-0">Carousel</h3>
+
+    <label class="flex flex-col gap-1">
+      <span>Carousel interval seconds</span>
+      <input
+        id="carousel-seconds"
+        type="number"
+        min="0"
+        max="3600"
+        step="1"
+        value="0"
+        class="w-full p-2 rounded border border-gray-300"
+      />
+    </label>
+
+    <p class="text-xs mt-1">0 disables carousel.</p>
+
+    <div class="flex gap-2 mt-3">
+      <button
+        id="read-carousel"
+        class="bg-blue-500 border-none hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+      >
+        Read Carousel
+      </button>
+
+      <button
+        id="write-carousel"
+        class="bg-green-500 border-none hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+      >
+        Save Carousel
+      </button>
+    </div>
+
+    <p class="text-xs mt-2">
+      <span id="carousel-status">Idle</span>
+    </p>
+  </div>
+</div>
+
+<script>
+  import { bluetoothService } from "../services/bluetooth";
+
+  let currentControlSettings = null;
+
+  function setSettingsStatus(text: string | null) {
+    const el = document.getElementById("settings-status");
+
+    if (el) {
+      el.textContent = text;
+    }
+  }
+
+  function setCarouselStatus(text: string | null) {
+    const el = document.getElementById("carousel-status");
+
+    if (el) {
+      el.textContent = text;
+    }
+  }
+
+  function setCheckbox(id: string, checked: boolean) {
+    const el = document.getElementById(id) as HTMLInputElement;
+
+    if (el) {
+      el.checked = Boolean(checked);
+    }
+  }
+
+  function getCheckbox(id: string) {
+    const el = document.getElementById(id) as HTMLInputElement;
+    return Boolean(el?.checked);
+  }
+
+  function renderControlSettings(settings: { disableBroadcast: any; disableBuzzer: any; disableVibration: any; disableLight: any; disableInterestSensing: any; disableAmbienceLight: any; rawBytes?: Uint8Array<ArrayBufferLike>; }) {
+    currentControlSettings = settings;
+
+    // UI checkboxes are "enabled"; service model uses disable* flags.
+    setCheckbox("setting-broadcast", !settings.disableBroadcast);
+    setCheckbox("setting-buzzer", !settings.disableBuzzer);
+    setCheckbox("setting-vibration", !settings.disableVibration);
+    setCheckbox("setting-light", !settings.disableLight);
+    setCheckbox("setting-interest-sensing", !settings.disableInterestSensing);
+    setCheckbox("setting-ambience-light", !settings.disableAmbienceLight);
+  }
+
+  function readSettingsPatchFromUi() {
+    return {
+      disableBroadcast: !getCheckbox("setting-broadcast"),
+      disableBuzzer: !getCheckbox("setting-buzzer"),
+      disableVibration: !getCheckbox("setting-vibration"),
+      disableLight: !getCheckbox("setting-light"),
+      disableInterestSensing: !getCheckbox("setting-interest-sensing"),
+      disableAmbienceLight: !getCheckbox("setting-ambience-light"),
+    };
+  }
+
+  bluetoothService.on("settingsStatus", (status) => {
+    setSettingsStatus(status);
+  });
+
+  bluetoothService.on("carouselStatus", (status) => {
+    setCarouselStatus(status);
+  });
+
+  const readSettingsButton = document.getElementById("read-settings");
+  const writeSettingsButton = document.getElementById("write-settings");
+  const readCarouselButton = document.getElementById("read-carousel");
+  const writeCarouselButton = document.getElementById("write-carousel");
+
+  readSettingsButton?.addEventListener("click", async () => {
+    try {
+      const settings = await bluetoothService.readDeviceSettings();
+      renderControlSettings(settings);
+    } catch (err) {
+      setSettingsStatus("Read failed");
+      console.error(err);
+    }
+  });
+
+  writeSettingsButton?.addEventListener("click", async () => {
+    try {
+      const settings = await bluetoothService.writeDeviceSettings(
+        readSettingsPatchFromUi(),
+      );
+
+      renderControlSettings(settings);
+    } catch (err) {
+      setSettingsStatus("Save failed");
+      console.error(err);
+    }
+  });
+
+  readCarouselButton?.addEventListener("click", async () => {
+    try {
+      const seconds = await bluetoothService.readCarouselSeconds();
+      const input = document.getElementById("carousel-seconds") as HTMLInputElement;
+
+      if (input) {
+        input.value = String(seconds);
+      }
+    } catch (err) {
+      setCarouselStatus("Read failed");
+      console.error(err);
+    }
+  });
+
+  writeCarouselButton?.addEventListener("click", async () => {
+    try {
+      const input = document.getElementById("carousel-seconds") as HTMLInputElement;
+      const seconds = Math.max(0, Math.min(Number(input?.value || 0), 3600));
+
+      await bluetoothService.writeCarouselSeconds(seconds);
+    } catch (err) {
+      setCarouselStatus("Save failed");
+      console.error(err);
+    }
+  });
+</script>

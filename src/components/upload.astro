@@ -1,0 +1,441 @@
+<div class="flex flex-col gap-4" id="upload-container">
+  <div
+    class="hidden flex flex-col items-center justify-center gap-3"
+    id="media-viewer"
+  >
+    <img
+      src=""
+      alt="Preview Image for user upload"
+      id="preview-image"
+      class="max-w-[240px] max-h-[320px] rounded border"
+    />
+
+    <video
+      controls
+      src=""
+      id="preview-video"
+      class="hidden max-w-[240px] max-h-[320px] rounded border"></video>
+  </div>
+
+  <div class="flex items-center justify-center w-full">
+    <label
+      for="file"
+      id="drop-zone"
+      class="flex flex-col items-center justify-center w-full h-32 p-4 border-2 border-dashed rounded-lg cursor-pointer bg-blue-300 border-black-300 hover:bg-blue-200 transition duration-300"
+    >
+      <div class="flex flex-col items-center justify-center pt-5 pb-6">
+        <svg
+          class="w-8 h-8 mb-4 text-black-500"
+          aria-hidden="true"
+          xmlns="http://w3.org"
+          fill="none"
+          viewBox="0 0 20 16"
+        >
+          <path
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
+          ></path>
+        </svg>
+
+        <p class="mb-2 text-sm text-black-500">
+          <span class="font-semibold">Click to upload</span> or drag and drop
+        </p>
+
+        <p class="text-xs text-black-500">MP4, GIF, PNG, JPG</p>
+      </div>
+
+      <input
+        id="file"
+        type="file"
+        class="hidden"
+        accept="image/png,image/*,video/*"
+      />
+    </label>
+  </div>
+
+  <button
+    id="upload"
+    class="mt-3 bg-green-500 border-none hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+  >
+    Upload
+  </button>
+
+  <div
+    id="summary"
+    class="mt-4 rounded border border-gray-300 bg-gray-100 p-3 text-sm"
+  >
+    <h3 class="font-bold mb-2 m-0">Upload Summary</h3>
+
+    <div class="grid grid-cols-2 gap-1">
+      <span>Status:</span>
+      <span id="summary-status">Idle</span>
+
+      <span>File:</span>
+      <span id="summary-file">-</span>
+
+      <span>Progress:</span>
+      <span id="summary-progress">0 / 0</span>
+    </div>
+
+    <div class="w-full bg-gray-300 rounded mt-3 h-3 overflow-hidden">
+      <div
+        id="summary-progress-bar"
+        class="bg-blue-600 h-3 transition-all duration-200"
+        style="width: 0%"
+      >
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { bluetoothService } from "../services/bluetooth";
+  import * as ffmpeg from "@ffmpeg/ffmpeg";
+  import { fetchFile } from "@ffmpeg/util";
+  
+  let ffmpegLoaded = false;
+  const mpegRef = new ffmpeg.FFmpeg();
+
+  function setSummaryText(id: string, value: string) {
+    const el = document.getElementById(id);
+
+    if (el) {
+      el.textContent = String(value);
+    }
+  }
+
+  function setSummaryStatus(value: string) {
+    setSummaryText("summary-status", value);
+  }
+
+  function setSummaryProgress(done: number, total: number) {
+    setSummaryText("summary-progress", `${done} / ${total}`);
+
+    const bar = document.getElementById("summary-progress-bar");
+
+    if (bar) {
+      const pct = total <= 0 ? 0 : Math.round((done / total) * 100);
+      bar.style.width = `${pct}%`;
+    }
+  }
+
+  function resetSummary() {
+    setSummaryStatus("Idle");
+    setSummaryText("summary-file", "-");
+    setSummaryProgress(0, 0);
+  }
+
+  async function loadFFMPEG() {
+    if (ffmpegLoaded) {
+      return;
+    }
+
+    setSummaryStatus("Loading FFmpeg");
+
+    mpegRef.on("log", ({ message }) => {
+      console.log(message);
+    });
+
+    await mpegRef.load();
+
+    ffmpegLoaded = true;
+    setSummaryStatus("FFmpeg ready");
+  }
+
+  function resizeTo3x4Blob(image: any): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) {
+        reject(new Error("Could not get canvas context"));
+        return;
+      }
+
+      const targetWidth = 240;
+      const targetHeight = 320;
+
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+
+      const origWidth = image.naturalWidth;
+      const origHeight = image.naturalHeight;
+
+      let sourceWidth = origWidth;
+      let sourceHeight = origHeight;
+      let sourceX = 0;
+      let sourceY = 0;
+
+      const currentRatio = origWidth / origHeight;
+      const targetRatio = 3 / 4;
+
+      if (currentRatio > targetRatio) {
+        sourceWidth = origHeight * targetRatio;
+        sourceX = (origWidth - sourceWidth) / 2;
+      } else {
+        sourceHeight = origWidth / targetRatio;
+        sourceY = (origHeight - sourceHeight) / 2;
+      }
+
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+      ctx.drawImage(
+        image,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        0,
+        0,
+        targetWidth,
+        targetHeight,
+      );
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error("Failed to create resized image blob"));
+          return;
+        }
+
+        resolve(blob);
+      }, "image/png");
+    });
+  }
+
+  async function transcodeToMJPEG(video:  File ) {
+    await loadFFMPEG();
+
+    const ffmpeg = mpegRef;
+
+    setSummaryStatus("Transcoding video");
+
+    try {
+      await ffmpeg.deleteFile("input.mp4");
+    } catch {}
+
+    try {
+      await ffmpeg.deleteFile(video!.name);
+    } catch {}
+
+    await ffmpeg.writeFile("input.mp4", await fetchFile(video));
+
+    await ffmpeg.exec([
+      "-i",
+      "input.mp4",
+
+      "-t",
+      "4",
+
+      "-an",
+      "-sn",
+      "-dn",
+
+      "-vf",
+      "fps=10,scale=240:320,format=yuvj420p",
+
+      "-c:v",
+      "mjpeg",
+
+      "-q:v",
+      "26",
+
+      video.name,
+    ]);
+
+    const data = await ffmpeg.readFile(video.name);
+    const bytes = typeof data === "string"
+      ? Uint8Array.from(data, (c) => c.charCodeAt(0))
+      : new Uint8Array(data);
+
+    const outFile = new File([bytes], video.name, {
+      type: "video/x-msvideo",
+    });
+
+    try {
+      await ffmpeg.deleteFile("input.mp4");
+    } catch {}
+
+    try {
+      await ffmpeg.deleteFile(video.name);
+    } catch {}
+
+    return outFile;
+  }
+
+  function loadImage(src: string) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Failed to load image"));
+
+      img.src = src;
+    });
+  }
+
+  function readFileAsDataURL(file: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          resolve(reader.result);
+        } else {
+          reject(new Error("FileReader did not return a string data URL"));
+        }
+      };
+
+      reader.onerror = () => reject(reader.error);
+
+      reader.readAsDataURL(file);
+    });
+  }
+
+  bluetoothService.on("status", (status) => {
+    setSummaryStatus(status);
+  });
+
+  bluetoothService.on("uploadPrepare", (info) => {
+    setSummaryText("summary-file", info.filename);
+    setSummaryProgress(0, info.chunks);
+  });
+
+  bluetoothService.on("uploadProgress", ({ done, total }) => {
+    setSummaryProgress(done, total);
+  });
+
+  bluetoothService.on("uploadComplete", () => {
+    setSummaryStatus("Complete");
+  });
+
+  const uploadButton = document.getElementById("upload")!;
+  const fileInput = document.getElementById("file")! as HTMLInputElement;
+
+  fileInput.onchange = async () => {
+    const file = fileInput.files?.[0];
+
+    if (!file) {
+      alert("Choose an upload first");
+      return;
+    }
+
+    const mediaViewer = document.getElementById("media-viewer");
+    const previewImage = document.getElementById("preview-image") as HTMLImageElement;
+    const previewVideo = document.getElementById("preview-video") as HTMLVideoElement;
+
+    try {
+      mediaViewer?.classList.remove("hidden");
+
+      if (file.type.includes("video")) {
+        previewImage?.classList.add("hidden");
+        previewVideo?.classList.remove("hidden");
+
+        previewVideo!.src = URL.createObjectURL(file);
+        setSummaryStatus("Video selected");
+      } else {
+        previewVideo?.classList.add("hidden");
+        previewImage?.classList.remove("hidden");
+
+        const dataUrl = await readFileAsDataURL(file);
+        const img = await loadImage(dataUrl);
+        const blob = await resizeTo3x4Blob(img);
+
+        previewImage!.src = URL.createObjectURL(blob);
+        setSummaryStatus("Image selected");
+      }
+    } catch (err) {
+      setSummaryStatus("Preview failed");
+      console.error("Preview failed:", err);
+    }
+  };
+
+  uploadButton.onclick = async () => {
+    const file = fileInput.files?.[0];
+
+    if (!file) {
+      alert("Choose an image or video first");
+      return;
+    }
+
+    try {
+      if (
+        file.type.includes("video") ||
+        file.name.toLowerCase().endsWith(".mp4")
+      ) {
+        const mjpegFile = await transcodeToMJPEG(file);
+        await bluetoothService.upload(mjpegFile);
+      } else {
+        const dataUrl = await readFileAsDataURL(file);
+        const img = await loadImage(dataUrl);
+        const resizedBlob = await resizeTo3x4Blob(img);
+
+        const resizedFile = new File([resizedBlob], file.name, {
+          type: "image/png",
+        });
+
+        await bluetoothService.upload(resizedFile);
+      }
+
+      console.log("done");
+    } catch (err) {
+      setSummaryStatus("Failed");
+      console.error("Upload failed:", err);
+    }
+  };
+
+  const dropZone = document.getElementById("drop-zone");
+
+  window.addEventListener("drop", (e) => {
+    if ([...e.dataTransfer!.items].some((item) => item.kind === "file")) {
+      e.preventDefault();
+    }
+  });
+
+  dropZone?.addEventListener("drop", (e) => {
+    if (e.dataTransfer!.files.length > 0) {
+      e.preventDefault();
+
+      fileInput.files = e.dataTransfer!.files;
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  });
+
+  dropZone?.addEventListener("dragover", (e) => {
+    const fileItems = [...e.dataTransfer!.items].filter(
+      (item) => item.kind === "file",
+    );
+
+    if (fileItems.length > 0) {
+      e.preventDefault();
+
+      if (
+        fileItems.some(
+          (item) =>
+            item.type.startsWith("image/") || item.type.startsWith("video/"),
+        )
+      ) {
+        e.dataTransfer!.dropEffect = "copy";
+      } else {
+        e.dataTransfer!.dropEffect = "none";
+      }
+    }
+  });
+
+  window.addEventListener("dragover", (e) => {
+    const fileItems = [...e.dataTransfer!.items].filter(
+      (item) => item.kind === "file",
+    );
+
+    if (fileItems.length > 0) {
+      e.preventDefault();
+
+      if (!dropZone?.contains(e.target as any)) {
+        e.dataTransfer!.dropEffect = "none";
+      }
+    }
+  });
+</script>

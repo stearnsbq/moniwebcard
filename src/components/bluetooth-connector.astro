@@ -1,12 +1,12 @@
 ---
 import Tabs from "./tabs.astro";
 import Tab from "./tab.astro";
-import Upload from './upload.astro'
-import BusinessCards from './business-cards.astro'
-import Settings from './settings.astro'
+import Upload from "./upload.astro";
+import BusinessCards from "./business-cards.astro";
+import Settings from "./settings.astro";
 ---
 
-<div class="container flex flex-col gap-4 ">
+<div class="container flex flex-col gap-4 min-h-0">
   <h2 id="connected-banner" class="m-0 hidden">Connected!</h2>
 
   <button
@@ -16,14 +16,16 @@ import Settings from './settings.astro'
     Connect
   </button>
 
-  <div id="tabs" class="hidden tabs-wrapper">
+  <div id="tabs" class="hidden tabs-wrapper min-h-0 overflow-y-auto">
     <Tabs>
       <Tab label="Upload">
         <Upload />
       </Tab>
+
       <Tab label="Cards">
         <BusinessCards />
       </Tab>
+
       <Tab label="Settings">
         <Settings />
       </Tab>
@@ -32,48 +34,35 @@ import Settings from './settings.astro'
 </div>
 
 <script>
-
   import { bluetoothService } from "../services/bluetooth";
 
-
-
-
-
-  bluetoothService.on("connected", () => {
-    document.getElementById("connect")?.classList.add("hidden");
-    document.getElementById("connected-banner")?.classList.remove("hidden");
-    document.getElementById("tabs")?.classList.remove("hidden");
-  });
-
-  bluetoothService.on("disconnected", () => {
-    document.getElementById("connect")?.classList.remove("hidden");
-    document.getElementById("connected-banner")?.classList.add("hidden");
-    document.getElementById("tabs")?.classList.add("hidden");
-  });
-
-
-
-
-  bluetoothService.on("error", (err) => {
-    console.error(err);
-  });
-
   const connectButton = document.getElementById("connect");
-
+  const connectedBanner = document.getElementById("connected-banner");
+  const tabs = document.getElementById("tabs");
 
   if (!connectButton) {
     throw new Error("Missing #connect element");
   }
 
-  connectButton.onclick = () => {
- //   resetSummary();
+  bluetoothService.on("connected", () => {
+    connectButton.classList.add("hidden");
+    connectedBanner?.classList.remove("hidden");
+    tabs?.classList.remove("hidden");
+  });
 
+  bluetoothService.on("disconnected", () => {
+    connectButton.classList.remove("hidden");
+    connectedBanner?.classList.add("hidden");
+    tabs?.classList.add("hidden");
+  });
+
+  bluetoothService.on("error", (err) => {
+    console.error(err);
+  });
+
+  connectButton.onclick = () => {
     bluetoothService.connect().catch((err) => {
-   //   setSummaryStatus("Connect failed");
       console.error(err);
     });
   };
-
-
-
 </script>

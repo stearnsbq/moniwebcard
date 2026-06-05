@@ -1,15 +1,14 @@
 ---
 import BluetoothConnector from "./bluetooth-connector.astro";
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
 ---
 
 <div
-  class="flex flex-col border-2 rounded-md gap-4 p-4 m-4 md:m-0 w-full md:w-3xl  bg-sky-300 max-w-5xl"
+  id="monicard-root"
+  class="flex flex-col border-2 rounded-md gap-4 p-4 m-4  max-w-5xl bg-sky-300 "
 >
   <div id="card-header" class="card-header-content">
     <h1 class="p-0 m-0">Monicard Web Uploader</h1>
+
     <p>
       This is a simple webapp designed to allow you to upload images / videos
       and manage settings on your monicard without using the wechat mini
@@ -30,15 +29,18 @@ import BluetoothConnector from "./bluetooth-connector.astro";
             stroke-linejoin="round"
             stroke-width="2"
             viewBox="0 0 24 24"
-            width="24"><path d="M6 9l6 6 6-6"></path></svg
+            width="24"
           >
+            <path d="M6 9l6 6 6-6"></path>
+          </svg>
         </span>
       </summary>
+
       <div class="text-slate-600 mt-3 group-open:animate-fadeIn">
         <p>
-          Note: this webapp only works on chromium based browsers due to the
-          native bluetooth api support. Firefox may be possible with an
-          extension
+          Note: this webapp only works on Chromium based browsers due to the
+          native Bluetooth API support. Firefox may be possible with an
+          extension.
         </p>
 
         <ol>
@@ -48,7 +50,7 @@ import BluetoothConnector from "./bluetooth-connector.astro";
           </li>
           <li>Enable it and restart your browser.</li>
           <li>
-            Click the connect button below, give permissions and try and connect
+            Click the connect button below, give permissions and try to connect
             your device.
           </li>
         </ol>
@@ -59,12 +61,20 @@ import BluetoothConnector from "./bluetooth-connector.astro";
   <BluetoothConnector />
 </div>
 
-
 <script>
   import { bluetoothService } from "../services/bluetooth";
 
+  const root = document.getElementById("monicard-root");
+  const header = document.getElementById("card-header");
+
   bluetoothService.on("connected", () => {
-    document.getElementById("card-header")?.classList.add("hidden");
+    header?.classList.add("hidden");
+
+
   });
 
+  bluetoothService.on("disconnected", () => {
+    header?.classList.remove("hidden");
+
+  });
 </script>

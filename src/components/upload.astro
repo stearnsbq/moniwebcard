@@ -209,6 +209,7 @@
 
   async function transcodeToMJPEG(video:  File ) {
     await loadFFMPEG();
+    console.log(video.name)
 
     const ffmpeg = mpegRef;
 
@@ -225,24 +226,27 @@
     await ffmpeg.writeFile("input.mp4", await fetchFile(video));
 
     await ffmpeg.exec([
-      "-i",
-      "input.mp4",
+        "-i",
+        "input.mp4",
 
-      "-t",
-      "4",
+        "-t",
+        "10",
 
-      "-an",
-      "-sn",
-      "-dn",
+        "-an",
+        "-sn",
+        "-dn",
 
-      "-vf",
-      "fps=10,scale=240:320,format=yuvj420p",
+        "-vf",
+        "fps=20,scale=240:320,format=yuvj420p",
 
-      "-c:v",
-      "mjpeg",
+        "-c:v",
+        "mjpeg",
 
-      "-q:v",
-      "26",
+        "-q:v",
+        "5",
+
+        "-f",
+        "mp4",
 
       video.name,
     ]);
@@ -253,7 +257,7 @@
       : new Uint8Array(data);
 
     const outFile = new File([bytes], video.name, {
-      type: "video/x-msvideo",
+      type: "video/mp4",
     });
 
     try {

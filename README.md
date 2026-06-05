@@ -22,9 +22,9 @@ I purchased mine off superbuy [Here](https://www.superbuy.com/en/page/buy/?url=h
 
 - Image Uploading
 - Video Uploading
+- Manage the settings on the device
+- Manage the business cards on the device
 
 ## Planned Features 
 
-- Manage the settings on the device
-- Manage the business cards on the device
 - Summary stats

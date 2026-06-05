@@ -3,9 +3,10 @@ import Tabs from "./tabs.astro";
 import Tab from "./tab.astro";
 import Upload from './upload.astro'
 import BusinessCards from './business-cards.astro'
+import Settings from './Settings.astro'
 ---
 
-<div class="container flex flex-col gap-4">
+<div class="container flex flex-col gap-4 ">
   <h2 id="connected-banner" class="m-0 hidden">Connected!</h2>
 
   <button
@@ -20,11 +21,11 @@ import BusinessCards from './business-cards.astro'
       <Tab label="Upload">
         <Upload />
       </Tab>
-      <Tab label="Business Cards">
+      <Tab label="Cards">
         <BusinessCards />
       </Tab>
       <Tab label="Settings">
-
+        <Settings />
       </Tab>
     </Tabs>
   </div>

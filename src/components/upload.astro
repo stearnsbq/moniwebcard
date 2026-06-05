@@ -195,6 +195,7 @@
         targetHeight,
       );
 
+
       canvas.toBlob((blob) => {
         if (!blob) {
           reject(new Error("Failed to create resized image blob"));
@@ -372,8 +373,8 @@
         const dataUrl = await readFileAsDataURL(file);
         const img = await loadImage(dataUrl);
         const resizedBlob = await resizeTo3x4Blob(img);
-
-        const resizedFile = new File([resizedBlob], file.name, {
+        const baseName = file.name.replace(/\.[^.]+$/, "");    
+        const resizedFile = new File([resizedBlob], `${baseName}.png`, {
           type: "image/png",
         });
 
